@@ -1,0 +1,35 @@
+name: Robo OLX
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: robo-olx
+
+jobs:
+  rodar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install curl_cffi
+      - run: python robo_olx.py
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+      - name: Guardar anuncios ja vistos
+        if: always()
+        run: |
+          git config user.name "robo-olx"
+          git config user.email "robo-olx@users.noreply.github.com"
+          git add estado.json 2>/dev/null || exit 0
+          git diff --cached --quiet || git commit -m "atualiza anuncios vistos"
+          git pull --rebase -q || true
+          git push -q || true
